@@ -9,35 +9,64 @@ public class TripsService : ITripsService
     
     public async Task<List<TripDTO>> GetTrips()
     {
-        var trips = new List<TripDTO>();
+        // Use a dictionary to dedupe trips by IdTrip
+        var tripDict = new Dictionary<int, TripDTO>();
 
-        string command = "SELECT IdTrip, Name, MaxPeople FROM Trip";
+        const string sql = @"
+        SELECT 
+            t.IdTrip, 
+            t.Name AS TripName, 
+            t.MaxPeople, 
+            t.Description,
+            t.DateFrom,
+            t.DateTo,
+            c.IdCountry, 
+            c.Name AS CountryName
+        FROM Trip t
+        JOIN Country_Trip ct ON t.IdTrip = ct.IdTrip
+        JOIN Country c ON c.IdCountry = ct.IdCountry;
+    ";
 
-        await using (SqlConnection conn = new SqlConnection(_connectionString))
-        await using (SqlCommand cmd = new SqlCommand(command, conn))
+        await using var conn = new SqlConnection(_connectionString);
+        await using var cmd  = new SqlCommand(sql, conn);
+
+        await conn.OpenAsync();
+        await using var reader = await cmd.ExecuteReaderAsync();
+
+        // Read every row
+        while (await reader.ReadAsync())
         {
-            await conn.OpenAsync();
+            // 1) Get the trip’s ID
+            var idTrip = reader.GetInt32(reader.GetOrdinal("IdTrip"));
 
-            using (var reader = await cmd.ExecuteReaderAsync())
+            // 2) If we haven't seen this trip yet, create it
+            if (!tripDict.TryGetValue(idTrip, out var trip))
             {
-                while (await reader.ReadAsync())
+                trip = new TripDTO
                 {
-                    int IdTrip = (int)reader["IdTrip"];
-                    string Name = (string)reader["Name"];
-                    int MaxPeople = (int)reader["MaxPeople"];
-                    trips.Add(new TripDTO()
-                    {
-                        Id = IdTrip,
-                        Name = Name,
-                        MaxPeople = MaxPeople,
-                    });
-                }
+                    Id         = idTrip,
+                    Name       = reader.GetString(reader.GetOrdinal("TripName")),
+                    MaxPeople  = reader.GetInt32(reader.GetOrdinal("MaxPeople")),
+                    Description = reader.GetString(reader.GetOrdinal("Description")),
+                    DateFrom = reader.GetDateTime(reader.GetOrdinal("DateFrom")),
+                    DateTo = reader.GetDateTime(reader.GetOrdinal("DateTo")),
+                    Countries  = new List<CountryDTO>()
+                };
+                tripDict[idTrip] = trip;
             }
-        }
-        
 
-        return trips;
+            // 3) Always add the current country
+            var country = new CountryDTO
+            {
+                Name = reader.GetString(reader.GetOrdinal("CountryName"))
+            };
+            trip.Countries.Add(country);
+        }
+
+        // Return all the trips we collected
+        return tripDict.Values.ToList();
     }
+
     public async Task<List<TripDTO>> GetTrips(int id)
     {
         var trips = new List<TripDTO>();
@@ -49,7 +78,7 @@ public class TripsService : ITripsService
         await using SqlCommand cmd = new SqlCommand();
         
         cmd.Connection = conn;
-        cmd.CommandText = "SELECT IdTrip, Name FROM Trip WHERE idTrip = @idTrip";
+        cmd.CommandText = "SELECT t.IdTrip, t.Name, t.MaxPeople, c.Name AS CountryName FROM Trip t JOIN Country_Trip ct ON t.IdTrip = ct.idTrip JOIN Country c ON c.IdCountry = ct.IdCountry WHERE t.idTrip = @idTrip";
         cmd.Parameters.AddWithValue("@idTrip", id);
         {
             await conn.OpenAsync();
@@ -59,10 +88,13 @@ public class TripsService : ITripsService
                 while (await reader.ReadAsync())
                 {
                     int idOrdinal = reader.GetOrdinal("IdTrip");
+                    int MaxPeopleOrdinal = reader.GetOrdinal("MaxPeople");
+                    //string Country = (string)reader["CountryName"];
                     trips.Add(new TripDTO()
                     {
                         Id = reader.GetInt32(idOrdinal),
-                        Name = reader.GetString(1),
+                        Name = (string)reader["Name"],
+                        MaxPeople = reader.GetInt32(MaxPeopleOrdinal),
                     });
                 }
             }

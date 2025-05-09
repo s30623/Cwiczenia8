@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Tutorial8.Models.DTOs;
 using Tutorial8.Services;
 
 namespace Tutorial8.Controllers;
@@ -19,10 +20,38 @@ public class ClientsController : ControllerBase
     public async Task<IActionResult> GetClientTrips(int id)
     {
         if(!await _clientService.DoesClientExist(id)){ 
-            return NotFound();
+            return NotFound("Klient nie istnieje");
         }
 
         var trip = await _clientService.GetClientTrips(id);
         return Ok(trip);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateClientTrip(ClientDTO newClientDto , CancellationToken cancellationToken)
+    {
+        
+        if (await _clientService.CreateClient(newClientDto, cancellationToken))
+        {
+            return Ok("Dodano klienta");
+        }
+        return BadRequest();
+    }
+
+    [HttpPut]
+    [Route("{id}/trips/{tripId}")]
+    public async Task<IActionResult> UpdateClientTrip(int id, int tripId)
+    {
+        if (!await _clientService.DoesClientExist(id))
+        {
+            return NotFound("Klient nie istnieje");
+        }
+
+        if (!await new TripsService().DoesTripExist(tripId))
+        {
+            return NotFound("Wycieczka nie istnieje");
+        }
+        
+        return Ok("Zarejestrowano klienta");
     }
 }
