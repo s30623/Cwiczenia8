@@ -40,7 +40,7 @@ public class ClientsController : ControllerBase
 
     [HttpPut]
     [Route("{id}/trips/{tripId}")]
-    public async Task<IActionResult> UpdateClientTrip(int id, int tripId)
+    public async Task<IActionResult> UpdateClientTrip(int id, int tripId,CancellationToken cancellationToken)
     {
         if (!await _clientService.DoesClientExist(id))
         {
@@ -51,7 +51,16 @@ public class ClientsController : ControllerBase
         {
             return NotFound("Wycieczka nie istnieje");
         }
-        
-        return Ok("Zarejestrowano klienta");
+
+        if (!await new TripsService().DoesTripExist(tripId))
+        {
+            return NotFound("Przekroczno max ilosc osob na wycieczke");
+        }
+
+        if (await _clientService.RegisterClient(id, tripId, cancellationToken))
+        {
+            return Ok("Zarejestrowano klienta");
+        }
+        return BadRequest("Nie udalo sie zarejestrowac");
     }
 }

@@ -124,4 +124,35 @@ public class TripsService : ITripsService
         }
         return false;
     }
+
+    public async Task<bool> MaxTripCount(int tripId)
+    {
+        using SqlConnection conn = new SqlConnection(_connectionString);
+        using SqlCommand cmd = new SqlCommand();
+        cmd.Connection = conn;
+        cmd.CommandText = "SELECT Count(*) AS Ilosc FROM Client_Trip WHERE IdTrip = @idTrip";
+        cmd.Parameters.AddWithValue("@idTrip", tripId);
+        int ilosc_uczestnikow = 0;
+        int max_uczestnikow = 0;
+        await conn.OpenAsync();
+        using (var reader = await cmd.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                ilosc_uczestnikow = reader.GetOrdinal("Ilosc");
+            }
+        }
+
+        cmd.CommandText = "SELECT MaxPeople FROM Trip WHERE IdTrip = @idTrip";
+        cmd.Parameters.AddWithValue("@idTrip", tripId);
+        await conn.OpenAsync();
+        using (var reader = await cmd.ExecuteReaderAsync())
+        {
+            while (await reader.ReadAsync())
+            {
+                max_uczestnikow = reader.GetOrdinal("MaxPeople");
+            }
+        }
+        return ilosc_uczestnikow < max_uczestnikow;
+    }
 }

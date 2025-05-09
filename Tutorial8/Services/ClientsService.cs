@@ -83,8 +83,19 @@ public class ClientsService : IClientsService
         return rowsAffected == 1;
     }
 
-    public Task<bool> RegisterClient(ClientDTO newClientDto, CancellationToken cancellationToken)
+    public async Task<bool> RegisterClient(int IdClient, int IdTrip,CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        DateTime RegisteredAt = DateTime.Now;
+        string sql = "INSERT INTO Client_Trip (IdClient, IdTrip, RegisteredAt) VALUES (@IdClient, @IdTrip, @RegisteredAt)";
+        await using SqlConnection conn = new SqlConnection(_connectionString);
+        await using SqlCommand cmd = new SqlCommand();
+        cmd.Connection = conn;
+        cmd.CommandText = sql;
+        cmd.Parameters.AddWithValue("@IdClient", IdClient);
+        cmd.Parameters.AddWithValue("@IdTrip", IdTrip);
+        cmd.Parameters.AddWithValue("@RegisteredAt", RegisteredAt);
+        await conn.OpenAsync(cancellationToken);
+        int rowsAffected = await cmd.ExecuteNonQueryAsync(cancellationToken);
+        return rowsAffected == 1;
     }
 }
