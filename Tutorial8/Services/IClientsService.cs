@@ -9,4 +9,6 @@ public interface IClientsService
     Task<bool> DoesClientExist(int id);
     Task<bool> CreateClient(ClientDTO newClientDto, CancellationToken cancellationToken);
     Task<bool> RegisterClient(int IdClient, int IdTrip, CancellationToken cancellationToken);
+    Task<bool> UnregisterClient(int IdClient, int IdTrip, CancellationToken cancellationToken);
+    Task<bool> ClientRegisterdToTrip(int IdClient, int IdTrip, CancellationToken cancellationToken);
 }

@@ -63,4 +63,19 @@ public class ClientsController : ControllerBase
         }
         return BadRequest("Nie udalo sie zarejestrowac");
     }
+
+    [HttpDelete]
+    [Route("{id}/trips/{tripId}")]
+    public async Task<IActionResult> DeleteClientTrip(int id, int tripId, CancellationToken cancellationToken)
+    {
+        if (!await _clientService.ClientRegisterdToTrip(id, tripId, cancellationToken))
+        {
+            return NotFound("Klient nie jest zarejestrowany do tej wycieczki");
+        }
+        if (await _clientService.UnregisterClient(id, tripId, cancellationToken))
+        {
+            return Ok("Wyrejestrowano klienta");
+        }
+        return BadRequest("Nie udalo sie wyrejestrowac");
+    }
 }

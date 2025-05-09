@@ -98,4 +98,39 @@ public class ClientsService : IClientsService
         int rowsAffected = await cmd.ExecuteNonQueryAsync(cancellationToken);
         return rowsAffected == 1;
     }
+
+    public async Task<bool> UnregisterClient(int IdClient, int IdTrip, CancellationToken cancellationToken)
+    {
+        string sql = "DELETE FROM Client_Trip WHERE IdClient = @IdClient AND IdTrip = @IdTrip";
+        await using SqlConnection conn = new SqlConnection(_connectionString);
+        await using SqlCommand cmd = new SqlCommand();
+        cmd.Connection = conn;
+        cmd.CommandText = sql;
+        cmd.Parameters.AddWithValue("@IdClient", IdClient);
+        cmd.Parameters.AddWithValue("@IdTrip", IdTrip);
+        await conn.OpenAsync(cancellationToken);
+        int rowsAffected = await cmd.ExecuteNonQueryAsync(cancellationToken);
+        return rowsAffected == 1;
+    }
+
+    public async Task<bool> ClientRegisterdToTrip(int IdClient, int IdTrip, CancellationToken cancellationToken)
+    {
+        await using SqlConnection conn = new SqlConnection(_connectionString);
+        await using SqlCommand cmd = new SqlCommand();
+        cmd.Connection = conn;
+        cmd.CommandText = "SELECT 1 FROM Client_Trip WHERE IdClient = @IdClient AND IdTrip = @IdTrip";
+        cmd.Parameters.AddWithValue("IdClient",IdClient);
+        cmd.Parameters.AddWithValue("IdTrip",IdTrip);
+        {
+            await conn.OpenAsync();
+            using (var reader = await cmd.ExecuteReaderAsync())
+            {
+                if (await reader.ReadAsync())
+                {
+                    return reader.HasRows;
+                }
+            }
+        }
+        return false;
+    }
 }
