@@ -9,7 +9,6 @@ public class TripsService : ITripsService
     
     public async Task<List<TripDTO>> GetTrips()
     {
-        // Use a dictionary to dedupe trips by IdTrip
         var tripDict = new Dictionary<int, TripDTO>();
 
         const string sql = @"
@@ -33,13 +32,9 @@ public class TripsService : ITripsService
         await conn.OpenAsync();
         await using var reader = await cmd.ExecuteReaderAsync();
 
-        // Read every row
         while (await reader.ReadAsync())
         {
-            // 1) Get the trip’s ID
             var idTrip = reader.GetInt32(reader.GetOrdinal("IdTrip"));
-
-            // 2) If we haven't seen this trip yet, create it
             if (!tripDict.TryGetValue(idTrip, out var trip))
             {
                 trip = new TripDTO
@@ -55,7 +50,6 @@ public class TripsService : ITripsService
                 tripDict[idTrip] = trip;
             }
 
-            // 3) Always add the current country
             var country = new CountryDTO
             {
                 Name = reader.GetString(reader.GetOrdinal("CountryName"))
@@ -63,7 +57,6 @@ public class TripsService : ITripsService
             trip.Countries.Add(country);
         }
 
-        // Return all the trips we collected
         return tripDict.Values.ToList();
     }
 
